@@ -2,10 +2,26 @@ const os = require('os');
 const http = require('http');
 const { Buffer } = require('buffer');
 const fs = require('fs');
-const axios = require('axios');
+
 const path = require('path');
 const net = require('net');
+
 const { exec, execSync } = require('child_process');
+
+function ensureModule(name) {
+    try {
+        require.resolve(name);
+    } catch (e) {
+        console.log(`Module '${name}' not found. Installing...`);
+        execSync(`npm install ${name}`, { stdio: 'inherit' });
+    }
+}
+ensureModule('axios');
+ensureModule('ws');
+
+
+const axios = require('axios');
+
 const { WebSocket, createWebSocketStream } = require('ws');
 const logcb = (...args) => console.log.bind(this, ...args);
 const errcb = (...args) => console.error.bind(this, ...args);
@@ -16,14 +32,14 @@ const NEZHA_PORT = process.env.NEZHA_PORT || '443';        // 端口为443时自
 const NEZHA_KEY = process.env.NEZHA_KEY || '';             // 哪吒三个变量不全不运行
 const DOMAIN = process.env.DOMAIN || '';  //项目域名或已反代的域名，不带前缀，建议填已反代的域名
 const NAME = process.env.NAME || 'webhostmost-GCP';
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 // 创建HTTP路由
 const httpServer = http.createServer((req, res) => {
     if (req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('Hello, World\n');
-    } else if (req.url === '/'+ UUID) {
+    } else if (req.url === `/${UUID}`) {
         const vlessURL = `vless://${UUID}@${DOMAIN}:443?encryption=none&security=tls&sni=${DOMAIN}&type=ws&host=${DOMAIN}&path=%2F#${NAME}`;
 
         const base64Content = Buffer.from(vlessURL).toString('base64');
@@ -36,8 +52,8 @@ const httpServer = http.createServer((req, res) => {
     }
 });
 
-httpServer.listen(port, () => {
-    console.log(`HTTP Server is running on port ${port}`);
+httpServer.listen(PORT, () => {
+    console.log(`HTTP Server is running on port ${PORT}`);
 });
 
 // 判断系统架构
@@ -145,13 +161,13 @@ function authorizeFiles() {
         }
     });
 }
-downloadFiles();
+//downloadFiles();
 
 // WebSocket 服务器
 const wss = new WebSocket.Server({ server: httpServer });
 wss.on('connection', ws => {
     console.log("WebSocket 连接成功");
-    ws.on('message', msg => {
+    ws.once('message', msg => {
         if (msg.length < 18) {
             console.error("数据长度无效");
             return;
