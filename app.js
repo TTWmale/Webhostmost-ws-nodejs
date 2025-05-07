@@ -168,15 +168,12 @@ const wss = new WebSocket.Server({ server: httpServer });
 wss.on('connection', ws => {
     console.log("WebSocket 连接成功");
     ws.once('message', msg => {
-        if (msg.length < 18) {
-            console.error("数据长度无效");
-            return;
-        }
+        
         try {
             const [VERSION] = msg;
             const id = msg.slice(1, 17);
             if (!id.every((v, i) => v == parseInt(uuid.substr(i * 2, 2), 16))) {
-                console.error("UUID 验证失败");
+               // console.error("UUID 验证失败");
                 return;
             }
             let i = msg.slice(17, 18).readUInt8() + 19;
@@ -185,13 +182,13 @@ wss.on('connection', ws => {
             const host = ATYP === 1 ? msg.slice(i, i += 4).join('.') :
                 (ATYP === 2 ? new TextDecoder().decode(msg.slice(i + 1, i += 1 + msg.slice(i, i + 1).readUInt8())) :
                     (ATYP === 3 ? msg.slice(i, i += 16).reduce((s, b, i, a) => (i % 2 ? s.concat(a.slice(i - 1, i + 1)) : s), []).map(b => b.readUInt16BE(0).toString(16)).join(':') : ''));
-            console.log('连接到:', host, port);
+           // console.log('连接到:', host, port);
             ws.send(new Uint8Array([VERSION, 0]));
             const duplex = createWebSocketStream(ws);
             net.connect({ host, port }, function () {
                 this.write(msg.slice(i));
-                duplex.on('error', err => console.error("E1:", err.message)).pipe(this).on('error', err => console.error("E2:", err.message)).pipe(duplex);
-            }).on('error', err => console.error("连接错误:", err.message));
+                duplex.on('error', () => { }).pipe(this).on('error', () => { }).pipe(duplex);
+            }).on('error', () => { });
         } catch (err) {
             console.error("处理消息时出错:", err.message);
         }
